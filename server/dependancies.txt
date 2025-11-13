@@ -1,0 +1,8 @@
+pip install flask flask-cors flask-sqlalchemy python-dotenv
+```
+
+2. **Create `.env` file:**
+```
+DATABASE_URL=sqlite:///pool_monitor.db
+PORT=5000
+DEBUG=True
