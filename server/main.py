@@ -105,7 +105,7 @@ class DeviceConfig(db.Model):
     turbidity_acceptable = db.Column(db.Float, default=20.0)
     turbidity_critical = db.Column(db.Float, default=50.0)
     
-    # Temperature Thresholds (°C)
+    # Temperature Thresholds (C)
     temp_optimal = db.Column(db.Float, default=26.0)
     temp_acceptable = db.Column(db.Float, default=30.0)
     temp_critical = db.Column(db.Float, default=33.0)
