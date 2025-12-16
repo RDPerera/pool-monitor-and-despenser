@@ -24,7 +24,7 @@ db = SQLAlchemy(app)
 
 class User(db.Model):
     """Store user information for authentication"""
-    __tablename__ = 'users'
+    __tablename__ = 'user_accounts'
     
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -67,8 +67,8 @@ class User(db.Model):
 
 
 class Device(db.Model):
-    """Store device information"""
-    __tablename__ = 'devices'
+    """Store pool monitoring device information"""
+    __tablename__ = 'pool_devices'
     
     id = db.Column(db.Integer, primary_key=True)
     device_id = db.Column(db.String(50), unique=True, nullable=False)
@@ -93,11 +93,11 @@ class Device(db.Model):
 
 
 class SensorReading(db.Model):
-    """Store sensor readings from devices"""
-    __tablename__ = 'sensor_readings'
+    """Store pool sensor reading data"""
+    __tablename__ = 'pool_sensor_readings'
     
     id = db.Column(db.Integer, primary_key=True)
-    device_id = db.Column(db.String(50), db.ForeignKey('devices.device_id'), nullable=False)
+    device_id = db.Column(db.String(50), db.ForeignKey('pool_devices.device_id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     
     # Sensor values
@@ -129,11 +129,11 @@ class SensorReading(db.Model):
 
 
 class DeviceConfig(db.Model):
-    """Store device configuration and calibration settings"""
-    __tablename__ = 'device_configs'
+    """Store pool device configuration"""
+    __tablename__ = 'pool_device_configs'
     
     id = db.Column(db.Integer, primary_key=True)
-    device_id = db.Column(db.String(50), db.ForeignKey('devices.device_id'), unique=True, nullable=False)
+    device_id = db.Column(db.String(50), db.ForeignKey('pool_devices.device_id'), unique=True, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Calibration values
@@ -196,11 +196,11 @@ class DeviceConfig(db.Model):
 
 
 class Alert(db.Model):
-    """Store alerts when critical conditions are detected"""
-    __tablename__ = 'alerts'
+    """Store pool monitoring alert information"""
+    __tablename__ = 'pool_alerts'
     
     id = db.Column(db.Integer, primary_key=True)
-    device_id = db.Column(db.String(50), db.ForeignKey('devices.device_id'), nullable=False)
+    device_id = db.Column(db.String(50), db.ForeignKey('pool_devices.device_id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     alert_type = db.Column(db.String(50))  # ph_critical, turbidity_critical, temp_critical
     severity = db.Column(db.String(20))  # warning, critical
@@ -222,8 +222,8 @@ class Alert(db.Model):
 
 
 class ChemicalDispenser(db.Model):
-    """Store chemical dispenser data"""
-    __tablename__ = 'chemical_dispenser'
+    """Store chemical dispenser job data"""
+    __tablename__ = 'chemical_dispenser_jobs'
     
     id = db.Column(db.Integer, primary_key=True)
     device_id = db.Column(db.String(50), nullable=False)
@@ -881,9 +881,9 @@ def get_statistics(device_id):
 
 # ==================== CHEMICAL DISPENSER ENDPOINTS ====================
 
-@app.route('/api/chemical-dispenser', methods=['POST'])
+@app.route('/api/dispensing-jobs', methods=['POST'])
 def create_chemical_data():
-    """Create new chemical dispenser data"""
+    """Create new chemical dispensing job"""
     try:
         data = request.get_json()
         
@@ -917,9 +917,9 @@ def create_chemical_data():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/chemical-dispenser', methods=['GET'])
+@app.route('/api/dispensing-jobs', methods=['GET'])
 def get_chemical_data():
-    """Get PENDING chemical dispenser jobs"""
+    """Get PENDING chemical dispensing jobs"""
     try:
         limit = min(request.args.get('limit', 100, type=int), 100)
         device_id = request.args.get('device_id')
@@ -938,9 +938,9 @@ def get_chemical_data():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/chemical-dispenser/<int:record_id>', methods=['PUT'])
+@app.route('/api/dispensing-jobs/<int:record_id>', methods=['PUT'])
 def update_chemical_data(record_id):
-    """Update chemical dispenser data"""
+    """Update chemical dispensing job data"""
     try:
         chemical_data = ChemicalDispenser.query.get(record_id)
         if not chemical_data:
@@ -976,6 +976,51 @@ def update_chemical_data(record_id):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/dispensing-jobs/<device_id>', methods=['GET'])
+def get_chemical_data_by_device(device_id):
+    """Get chemical dispensing jobs for a specific device"""
+    try:
+        limit = min(request.args.get('limit', 100, type=int), 100)
+        status_filter = request.args.get('status', 'PENDING')  # Default to PENDING, but allow override
+        
+        # Query for jobs by device_id and status
+        query = ChemicalDispenser.query.filter_by(device_id=device_id, flag=status_filter)
+        chemical_data = query.order_by(ChemicalDispenser.timestamp.desc()).limit(limit).all()
+        
+        return jsonify([data.to_dict() for data in chemical_data]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/dispensing-jobs/all', methods=['GET'])
+def get_all_chemical_jobs():
+    """Get all chemical dispensing jobs for tracking (including completed ones)"""
+    try:
+        limit = min(request.args.get('limit', 100, type=int), 500)  # Allow higher limit for tracking
+        device_id = request.args.get('device_id')
+        status_filter = request.args.get('status')  # Optional status filter
+        
+        # Base query for all jobs
+        query = ChemicalDispenser.query
+        
+        # Filter by device_id if provided
+        if device_id:
+            query = query.filter_by(device_id=device_id)
+            
+        # Filter by status if provided
+        if status_filter:
+            query = query.filter_by(flag=status_filter)
+        
+        chemical_data = query.order_by(ChemicalDispenser.timestamp.desc()).limit(limit).all()
+        
+        return jsonify({
+            'total_jobs': len(chemical_data),
+            'jobs': [data.to_dict() for data in chemical_data]
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/', methods=['GET'])
 def index():
     """API root endpoint"""
@@ -995,10 +1040,12 @@ def index():
             'devices': '/api/devices (GET)',
             'device_readings': '/api/devices/<device_id>/readings (GET)',
             'create_config': '/api/devices/<device_id>/config (POST)',
-            # Chemical dispenser
-            'chemical_dispenser_create': '/api/chemical-dispenser (POST)',
-            'chemical_dispenser_read': '/api/chemical-dispenser (GET)',
-            'chemical_dispenser_update': '/api/chemical-dispenser/<id> (PUT)'
+            # Chemical dispensing jobs
+            'dispensing_jobs_create': '/api/dispensing-jobs (POST)',
+            'dispensing_jobs_pending': '/api/dispensing-jobs (GET) - supports ?device_id=<id>',
+            'dispensing_jobs_by_device': '/api/dispensing-jobs/<device_id> (GET) - device specific',
+            'dispensing_jobs_all_tracking': '/api/dispensing-jobs/all (GET)',
+            'dispensing_jobs_update': '/api/dispensing-jobs/<id> (PUT)'
         }
     }), 200
 

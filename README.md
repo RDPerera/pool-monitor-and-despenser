@@ -72,17 +72,21 @@ The server will start on http://localhost:5001
 - `GET /api/stats/<device_id>` - Get device statistics
   - Query parameters: `hours` (default: 24)
 
-### Chemical Dispenser Endpoints
+### Chemical Dispensing Jobs Endpoints
 
-#### CRUD Operations for Chemical Data
-- `POST /api/chemical-dispenser` - Create new chemical dispenser record
-- `GET /api/chemical-dispenser` - Get PENDING chemical dispenser jobs (limited to 100 records)
+#### CRUD Operations for Chemical Dispensing Jobs
+- `POST /api/dispensing-jobs` - Create new chemical dispensing job
+- `GET /api/dispensing-jobs` - Get PENDING dispensing jobs (limited to 100 records)
   - Query parameters: `limit` (max 100), `device_id` (filter by device)
-- `PUT /api/chemical-dispenser/<record_id>` - Update chemical dispenser record
+- `GET /api/dispensing-jobs/<device_id>` - Get dispensing jobs for specific device
+  - Query parameters: `limit` (max 100), `status` (default: PENDING)
+- `GET /api/dispensing-jobs/all` - Get ALL dispensing jobs for tracking (including completed)
+  - Query parameters: `limit` (max 500), `device_id` (filter by device), `status` (filter by status)
+- `PUT /api/dispensing-jobs/<record_id>` - Update dispensing job record
 
-### Chemical Dispenser Data Format
+### Chemical Dispensing Jobs Data Format
 
-The chemical dispenser manages the following data:
+The chemical dispensing system manages the following job data:
 
 ```json
 {
@@ -98,7 +102,7 @@ The chemical dispenser manages the following data:
 ```
 
 **Fields:**
-- `device_id`: Chemical dispenser device identifier (string)
+- `device_id`: Chemical dispensing device identifier (string)
 - `hcl`: Hydrochloric acid level (float)
 - `soda`: Soda ash level (float) 
 - `cl`: Chlorine level (float)
@@ -341,10 +345,10 @@ curl -X POST http://localhost:5000/api/devices/ESP32_POOL_001/config \
 }
 ```
 
-### 4. Chemical Dispenser Endpoints
+### 4. Chemical Dispensing Jobs Endpoints
 
-#### Create Chemical Dispenser Record
-**POST** `/api/chemical-dispenser`
+#### Create Chemical Dispensing Job
+**POST** `/api/dispensing-jobs`
 
 **Request Payload:**
 ```json
@@ -361,7 +365,7 @@ curl -X POST http://localhost:5000/api/devices/ESP32_POOL_001/config \
 
 **Sample cURL:**
 ```bash
-curl -X POST http://localhost:5000/api/chemical-dispenser \
+curl -X POST http://localhost:5000/api/dispensing-jobs \
   -H "Content-Type: application/json" \
   -d '{
     "device_id": "ESP32_CHEM_001",
@@ -388,8 +392,8 @@ curl -X POST http://localhost:5000/api/chemical-dispenser \
 }
 ```
 
-#### Update Chemical Dispenser Record
-**PUT** `/api/chemical-dispenser/<record_id>`
+#### Update Chemical Dispensing Job
+**PUT** `/api/dispensing-jobs/<record_id>`
 
 **Request Payload:**
 ```json
@@ -402,7 +406,7 @@ curl -X POST http://localhost:5000/api/chemical-dispenser \
 
 **Sample cURL:**
 ```bash
-curl -X PUT http://localhost:5000/api/chemical-dispenser/1 \
+curl -X PUT http://localhost:5000/api/dispensing-jobs/1 \
   -H "Content-Type: application/json" \
   -d '{
     "flag": "IN_PROGRESS",
@@ -461,8 +465,8 @@ curl -X PUT http://localhost:5000/api/chemical-dispenser/1 \
 ]
 ```
 
-#### Get Chemical Dispenser Data (PENDING Jobs Only)
-**GET** `/api/chemical-dispenser?limit=3`
+#### Get Chemical Dispensing Jobs (PENDING Jobs Only)
+**GET** `/api/dispensing-jobs?limit=3`
 
 **Response:**
 ```json
@@ -532,11 +536,26 @@ curl -X PUT http://localhost:5000/api/chemical-dispenser/1 \
 # Get device readings with custom limit and time filter
 curl "http://localhost:5000/api/devices/ESP32_POOL_001/readings?limit=50&hours=12"
 
-# Get chemical dispenser data with limit
-curl "http://localhost:5000/api/chemical-dispenser?limit=25"
+# Get dispensing jobs data with limit
+curl "http://localhost:5000/api/dispensing-jobs?limit=25"
 
 # Get PENDING jobs for specific device
-curl "http://localhost:5000/api/chemical-dispenser?device_id=ESP32_CHEM_001"
+curl "http://localhost:5000/api/dispensing-jobs?device_id=ESP32_CHEM_001"
+
+# Get jobs by device ID (dedicated endpoint)
+curl "http://localhost:5000/api/dispensing-jobs/ESP32_CHEM_001"
+
+# Get jobs by device ID with custom status
+curl "http://localhost:5000/api/dispensing-jobs/ESP32_CHEM_001?status=COMPLETED&limit=10"
+
+# Get ALL jobs for tracking (including completed ones)
+curl "http://localhost:5000/api/dispensing-jobs/all"
+
+# Get all jobs for specific device (all statuses)
+curl "http://localhost:5000/api/dispensing-jobs/all?device_id=ESP32_CHEM_001"
+
+# Get all completed jobs for tracking
+curl "http://localhost:5000/api/dispensing-jobs/all?status=COMPLETED&limit=200"
 
 # Get device statistics for last week
 curl "http://localhost:5000/api/stats/ESP32_POOL_001?hours=168"
@@ -589,11 +608,12 @@ JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production
 ## Database Models
 
 The API uses SQLAlchemy with the following models:
-- `Device` - Pool monitoring devices
-- `SensorReading` - Sensor data from devices
-- `DeviceConfig` - Device configuration and calibration
-- `Alert` - Critical condition alerts
-- `ChemicalDispenser` - Chemical dispenser data
+- `Device` (pool_devices) - Pool monitoring devices
+- `SensorReading` (pool_sensor_readings) - Sensor data from devices
+- `DeviceConfig` (pool_device_configs) - Device configuration and calibration
+- `Alert` (pool_alerts) - Critical condition alerts
+- `ChemicalDispenser` (chemical_dispenser_jobs) - Chemical dispenser job data
+- `User` (user_accounts) - User authentication data
 
 ## Project Structure
 
