@@ -4,6 +4,9 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash, check_password_hash
+import jwt
+from functools import wraps
 
 # Load environment variables
 load_dotenv()
@@ -14,9 +17,54 @@ CORS(app)
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///pool_monitor.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
 db = SQLAlchemy(app)
 
 # ==================== DATABASE MODELS ====================
+
+class User(db.Model):
+    """Store user information for authentication"""
+    __tablename__ = 'users'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+    first_name = db.Column(db.String(50))
+    last_name = db.Column(db.String(50))
+    role = db.Column(db.String(20), default='user')  # user, admin
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login = db.Column(db.DateTime)
+    
+    def set_password(self, password):
+        """Hash and set password"""
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        """Check if provided password matches hash"""
+        return check_password_hash(self.password_hash, password)
+    
+    def generate_token(self):
+        """Generate JWT token for user"""
+        payload = {
+            'user_id': self.id,
+            'role': self.role,
+            'exp': datetime.utcnow() + timedelta(hours=24)
+        }
+        return jwt.encode(payload, app.config['JWT_SECRET_KEY'], algorithm='HS256')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'email': self.email,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'role': self.role,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat(),
+            'last_login': self.last_login.isoformat() if self.last_login else None
+        }
+
 
 class Device(db.Model):
     """Store device information"""
@@ -171,6 +219,219 @@ class Alert(db.Model):
             'value': self.value,
             'acknowledged': self.acknowledged
         }
+
+
+class ChemicalDispenser(db.Model):
+    """Store chemical dispenser data"""
+    __tablename__ = 'chemical_dispenser'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.String(50), nullable=False)
+    hcl = db.Column(db.Float, nullable=False)
+    soda = db.Column(db.Float, nullable=False)
+    cl = db.Column(db.Float, nullable=False)
+    al = db.Column(db.Float, nullable=False)
+    flag = db.Column(db.String(50), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'device_id': self.device_id,
+            'hcl': self.hcl,
+            'soda': self.soda,
+            'cl': self.cl,
+            'al': self.al,
+            'flag': self.flag,
+            'timestamp': self.timestamp.isoformat()
+        }
+
+
+# ==================== AUTHENTICATION DECORATOR ====================
+
+def token_required(f):
+    """Decorator to require JWT token for protected routes"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        
+        if not token:
+            return jsonify({'error': 'Token is missing'}), 401
+        
+        try:
+            if token.startswith('Bearer '):
+                token = token[7:]
+            
+            data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
+            current_user = User.query.get(data['user_id'])
+            
+            if not current_user or not current_user.is_active:
+                return jsonify({'error': 'Token is invalid'}), 401
+                
+        except jwt.ExpiredSignatureError:
+            return jsonify({'error': 'Token has expired'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'error': 'Token is invalid'}), 401
+        
+        return f(current_user, *args, **kwargs)
+    return decorated
+
+
+# ==================== USER AUTHENTICATION ENDPOINTS ====================
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    """Register a new user"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Validate required fields
+        required_fields = ['email', 'password']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        # Check if email already exists
+        existing_user = User.query.filter_by(email=data['email']).first()
+        if existing_user:
+            return jsonify({'error': 'Email already exists'}), 409
+        
+        # Create new user
+        user = User(
+            email=data['email'],
+            first_name=data.get('first_name'),
+            last_name=data.get('last_name'),
+            role=data.get('role', 'user')
+        )
+        user.set_password(data['password'])
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        # Generate token
+        token = user.generate_token()
+        
+        return jsonify({
+            'message': 'User registered successfully',
+            'user': user.to_dict(),
+            'token': token
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Login user and return JWT token"""
+    try:
+        data = request.get_json()
+        
+        if not data or not data.get('email') or not data.get('password'):
+            return jsonify({'error': 'Email and password required'}), 400
+        
+        # Find user by email
+        user = User.query.filter_by(email=data['email']).first()
+        
+        if not user or not user.check_password(data['password']):
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        if not user.is_active:
+            return jsonify({'error': 'Account is deactivated'}), 401
+        
+        # Update last login
+        user.last_login = datetime.utcnow()
+        db.session.commit()
+        
+        # Generate token
+        token = user.generate_token()
+        
+        return jsonify({
+            'message': 'Login successful',
+            'user': user.to_dict(),
+            'token': token
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/profile', methods=['GET'])
+@token_required
+def get_profile(current_user):
+    """Get current user profile"""
+    return jsonify(current_user.to_dict()), 200
+
+
+@app.route('/api/auth/profile', methods=['PUT'])
+@token_required
+def update_profile(current_user):
+    """Update current user profile"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Update allowed fields
+        if 'first_name' in data:
+            current_user.first_name = data['first_name']
+        if 'last_name' in data:
+            current_user.last_name = data['last_name']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Profile updated successfully',
+            'user': current_user.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/change-password', methods=['PUT'])
+@token_required
+def change_password(current_user):
+    """Change user password"""
+    try:
+        data = request.get_json()
+        
+        if not data or not data.get('current_password') or not data.get('new_password'):
+            return jsonify({'error': 'Current password and new password required'}), 400
+        
+        # Verify current password
+        if not current_user.check_password(data['current_password']):
+            return jsonify({'error': 'Current password is incorrect'}), 401
+        
+        # Set new password
+        current_user.set_password(data['new_password'])
+        db.session.commit()
+        
+        return jsonify({'message': 'Password changed successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/users', methods=['GET'])
+@token_required
+def get_users(current_user):
+    """Get all users (admin only)"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    try:
+        users = User.query.all()
+        return jsonify([user.to_dict() for user in users]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # ==================== API ENDPOINTS ====================
@@ -364,8 +625,8 @@ def update_device(device_id):
 def get_readings(device_id):
     """Get sensor readings for a device"""
     try:
-        # Get query parameters
-        limit = request.args.get('limit', 100, type=int)
+        # Get query parameters - limit to maximum 100 records
+        limit = min(request.args.get('limit', 100, type=int), 100)
         hours = request.args.get('hours', type=int)
         
         query = SensorReading.query.filter_by(device_id=device_id)
@@ -406,6 +667,61 @@ def get_device_config(device_id):
         
         return jsonify(config.to_dict()), 200
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/devices/<device_id>/config', methods=['POST'])
+def create_device_config(device_id):
+    """Create device configuration"""
+    try:
+        # Check if device exists
+        device = Device.query.filter_by(device_id=device_id).first()
+        if not device:
+            return jsonify({'error': 'Device not found'}), 404
+        
+        # Check if config already exists
+        existing_config = DeviceConfig.query.filter_by(device_id=device_id).first()
+        if existing_config:
+            return jsonify({'error': 'Configuration already exists. Use PUT to update.'}), 409
+        
+        data = request.get_json()
+        config = DeviceConfig(device_id=device_id)
+        
+        # Set configuration values from request data
+        if 'calibration' in data:
+            cal = data['calibration']
+            config.ph_offset = cal.get('ph_offset', 0.0)
+            config.ph_slope = cal.get('ph_slope', 1.0)
+            config.turbidity_offset = cal.get('turbidity_offset', 0.0)
+            config.turbidity_slope = cal.get('turbidity_slope', 1.0)
+            config.temp_offset = cal.get('temp_offset', 0.0)
+        
+        if 'thresholds' in data:
+            thresh = data['thresholds']
+            if 'ph' in thresh:
+                config.ph_optimal = thresh['ph'].get('optimal', 7.4)
+                config.ph_acceptable = thresh['ph'].get('acceptable', 7.8)
+                config.ph_critical = thresh['ph'].get('critical', 8.5)
+            if 'turbidity' in thresh:
+                config.turbidity_optimal = thresh['turbidity'].get('optimal', 5.0)
+                config.turbidity_acceptable = thresh['turbidity'].get('acceptable', 20.0)
+                config.turbidity_critical = thresh['turbidity'].get('critical', 50.0)
+            if 'temperature' in thresh:
+                config.temp_optimal = thresh['temperature'].get('optimal', 26.0)
+                config.temp_acceptable = thresh['temperature'].get('acceptable', 30.0)
+                config.temp_critical = thresh['temperature'].get('critical', 33.0)
+        
+        if 'intervals' in data:
+            intervals = data['intervals']
+            config.post_interval = intervals.get('post_interval', 1000)
+            config.config_interval = intervals.get('config_interval', 60000)
+        
+        db.session.add(config)
+        db.session.commit()
+        
+        return jsonify(config.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 
@@ -563,18 +879,126 @@ def get_statistics(device_id):
         return jsonify({'error': str(e)}), 500
 
 
+# ==================== CHEMICAL DISPENSER ENDPOINTS ====================
+
+@app.route('/api/chemical-dispenser', methods=['POST'])
+def create_chemical_data():
+    """Create new chemical dispenser data"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Validate required fields
+        required_fields = ['device_id', 'hcl', 'soda', 'cl', 'al', 'flag']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        chemical_data = ChemicalDispenser(
+            device_id=data['device_id'],
+            hcl=float(data['hcl']),
+            soda=float(data['soda']),
+            cl=float(data['cl']),
+            al=float(data['al']),
+            flag=data['flag'],
+            timestamp=datetime.strptime(data['timestamp'], '%Y-%m-%d %H:%M:%S') if 'timestamp' in data else datetime.utcnow()
+        )
+        
+        db.session.add(chemical_data)
+        db.session.commit()
+        
+        return jsonify(chemical_data.to_dict()), 201
+    except ValueError as e:
+        return jsonify({'error': f'Invalid data format: {str(e)}'}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/chemical-dispenser', methods=['GET'])
+def get_chemical_data():
+    """Get PENDING chemical dispenser jobs"""
+    try:
+        limit = min(request.args.get('limit', 100, type=int), 100)
+        device_id = request.args.get('device_id')
+        
+        # Base query for PENDING jobs only
+        query = ChemicalDispenser.query.filter_by(flag='PENDING')
+        
+        # Filter by device_id if provided
+        if device_id:
+            query = query.filter_by(device_id=device_id)
+        
+        chemical_data = query.order_by(ChemicalDispenser.timestamp.desc()).limit(limit).all()
+        
+        return jsonify([data.to_dict() for data in chemical_data]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/chemical-dispenser/<int:record_id>', methods=['PUT'])
+def update_chemical_data(record_id):
+    """Update chemical dispenser data"""
+    try:
+        chemical_data = ChemicalDispenser.query.get(record_id)
+        if not chemical_data:
+            return jsonify({'error': 'Record not found'}), 404
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Update fields if provided
+        if 'device_id' in data:
+            chemical_data.device_id = data['device_id']
+        if 'hcl' in data:
+            chemical_data.hcl = float(data['hcl'])
+        if 'soda' in data:
+            chemical_data.soda = float(data['soda'])
+        if 'cl' in data:
+            chemical_data.cl = float(data['cl'])
+        if 'al' in data:
+            chemical_data.al = float(data['al'])
+        if 'flag' in data:
+            chemical_data.flag = data['flag']
+        if 'timestamp' in data:
+            chemical_data.timestamp = datetime.strptime(data['timestamp'], '%Y-%m-%d %H:%M:%S')
+        
+        db.session.commit()
+        
+        return jsonify(chemical_data.to_dict()), 200
+    except ValueError as e:
+        return jsonify({'error': f'Invalid data format: {str(e)}'}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/', methods=['GET'])
 def index():
     """API root endpoint"""
     return jsonify({
-        'name': 'Pool Water Quality Monitor API',
+        'name': 'Pool Water Quality Monitor & Chemical Dispenser API',
         'version': '1.0.0',
         'endpoints': {
+            # Authentication
+            'register': '/api/auth/register (POST)',
+            'login': '/api/auth/login (POST)',
+            'profile': '/api/auth/profile (GET/PUT)',
+            'change_password': '/api/auth/change-password (PUT)',
+            'users': '/api/users (GET - Admin only)',
+            # Device endpoints
             'device_data': '/pool/data (POST)',
             'device_config': '/pool/config (GET)',
             'devices': '/api/devices (GET)',
             'device_readings': '/api/devices/<device_id>/readings (GET)',
-            'device_alerts': '/api/devices/<device_id>/alerts (GET)'
+            'create_config': '/api/devices/<device_id>/config (POST)',
+            # Chemical dispenser
+            'chemical_dispenser_create': '/api/chemical-dispenser (POST)',
+            'chemical_dispenser_read': '/api/chemical-dispenser (GET)',
+            'chemical_dispenser_update': '/api/chemical-dispenser/<id> (PUT)'
         }
     }), 200
 
