@@ -29,9 +29,9 @@ class Device {
 
 @JsonSerializable()
 class SensorReading {
-  final int id;
+  final int? id;
   @JsonKey(name: 'device_id')
-  final String deviceId;
+  final String? deviceId;
   final String timestamp;
   final double ph;
   final double turbidity;
@@ -43,18 +43,31 @@ class SensorReading {
   final int? uptime;
 
   SensorReading({
-    required this.id,
-    required this.deviceId,
-    required this.timestamp,
-    required this.ph,
-    required this.turbidity,
-    required this.temperature,
-    required this.waterQuality,
+    this.id,
+    this.deviceId,
+    this.timestamp = '',
+    this.ph = 0.0,
+    this.turbidity = 0.0,
+    this.temperature = 0.0,
+    this.waterQuality = '',
     this.wifiRssi,
     this.uptime,
   });
 
-  factory SensorReading.fromJson(Map<String, dynamic> json) => _$SensorReadingFromJson(json);
+  factory SensorReading.fromJson(Map<String, dynamic> json) {
+    return SensorReading(
+      id: json['id'] as int?,
+      deviceId: json['device_id'] as String?,
+      timestamp: json['timestamp'] as String? ?? '',
+      ph: (json['ph'] as num?)?.toDouble() ?? 0.0,
+      turbidity: (json['turbidity'] as num?)?.toDouble() ?? 0.0,
+      temperature: (json['temperature'] as num?)?.toDouble() ?? 0.0,
+      waterQuality: json['water_quality'] as String? ?? '',
+      wifiRssi: json['wifi_rssi'] as int?,
+      uptime: json['uptime'] as int?,
+    );
+  }
+
   Map<String, dynamic> toJson() => _$SensorReadingToJson(this);
 }
 
