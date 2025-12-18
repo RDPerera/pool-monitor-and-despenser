@@ -55,16 +55,18 @@ class SensorReading {
   });
 
   factory SensorReading.fromJson(Map<String, dynamic> json) {
+    final sensors = json['sensors'] as Map<String, dynamic>?;
+    final status = json['status'] as Map<String, dynamic>?;
     return SensorReading(
       id: json['id'] as int?,
       deviceId: json['device_id'] as String?,
       timestamp: json['timestamp'] as String? ?? '',
-      ph: (json['ph'] as num?)?.toDouble() ?? 0.0,
-      turbidity: (json['turbidity'] as num?)?.toDouble() ?? 0.0,
-      temperature: (json['temperature'] as num?)?.toDouble() ?? 0.0,
-      waterQuality: json['water_quality'] as String? ?? '',
-      wifiRssi: json['wifi_rssi'] as int?,
-      uptime: json['uptime'] as int?,
+      ph: (sensors?['ph'] as num?)?.toDouble() ?? (json['ph'] as num?)?.toDouble() ?? 0.0,
+      turbidity: (sensors?['turbidity'] as num?)?.toDouble() ?? (json['turbidity'] as num?)?.toDouble() ?? 0.0,
+      temperature: (sensors?['temperature'] as num?)?.toDouble() ?? (json['temperature'] as num?)?.toDouble() ?? 0.0,
+      waterQuality: status?['water_quality'] as String? ?? json['water_quality'] as String? ?? '',
+      wifiRssi: status?['wifi_rssi'] as int? ?? json['wifi_rssi'] as int?,
+      uptime: status?['uptime'] as int? ?? json['uptime'] as int?,
     );
   }
 
