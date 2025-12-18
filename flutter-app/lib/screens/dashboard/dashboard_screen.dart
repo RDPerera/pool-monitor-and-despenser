@@ -2,8 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/device_provider.dart';
 
-class DashboardScreen extends StatelessWidget {
+
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        deviceProvider.loadDevices();
+      });
+      _initialized = true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -11,78 +31,118 @@ class DashboardScreen extends StatelessWidget {
     final device = deviceProvider.selectedDevice;
     final reading = deviceProvider.latestReading;
     final devices = deviceProvider.devices;
+    final error = deviceProvider.error;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Pool Dashboard')),
       body: deviceProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : device == null || reading == null
-              ? const Center(child: Text('No device or data available'))
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            device.name,
-                            style: Theme.of(context).textTheme.headline6,
-                          ),
-                          if (devices.length > 1)
-                            DropdownButton<String>(
-                              value: device.deviceId,
-                              items: devices
-                                  .map((d) => DropdownMenuItem(
-                                        value: d.deviceId,
-                                        child: Text(d.name),
-                                      ))
-                                  .toList(),
-                              onChanged: (id) {
-                                if (id != null) {
-                                  deviceProvider.selectDevice(id);
-                                }
-                              },
+          : error != null
+              ? Center(child: Text('Error: $error', style: const TextStyle(color: Colors.red)))
+              : device == null
+                  ? const Center(child: Text('No device available'))
+                  : reading == null
+                      ? Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    device.name,
+                                    style: Theme.of(context).textTheme.headline6,
+                                  ),
+                                  if (devices.length > 1)
+                                    DropdownButton<String>(
+                                      value: device.deviceId,
+                                      items: devices
+                                          .map((d) => DropdownMenuItem(
+                                                value: d.deviceId,
+                                                child: Text(d.name),
+                                              ))
+                                          .toList(),
+                                      onChanged: (id) {
+                                        if (id != null) {
+                                          deviceProvider.selectDevice(id);
+                                        }
+                                      },
+                                    ),
+                                ],
+                              ),
                             ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: GridView.count(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        childAspectRatio: 1.1,
-                        children: [
-                          _MetricCard(
-                            title: 'pH',
-                            value: reading.ph.toStringAsFixed(2),
-                            color: _getMetricColor(reading.ph, 7.2, 7.8),
-                            icon: Icons.science,
-                            onTap: () => Navigator.pushNamed(context, '/metric/ph'),
-                          ),
-                          _MetricCard(
-                            title: 'Turbidity',
-                            value: reading.turbidity.toStringAsFixed(2),
-                            color: _getMetricColor(reading.turbidity, 0, 5),
-                            icon: Icons.opacity,
-                            onTap: () => Navigator.pushNamed(context, '/metric/turbidity'),
-                          ),
-                          _MetricCard(
-                            title: 'Temperature',
-                            value: reading.temperature.toStringAsFixed(1) + ' °C',
-                            color: _getMetricColor(reading.temperature, 26, 30),
-                            icon: Icons.thermostat,
-                            onTap: () => Navigator.pushNamed(context, '/metric/temperature'),
-                          ),
-                          _AllMetricsCard(
-                            onTap: () => Navigator.pushNamed(context, '/metrics/graph'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                            const Expanded(
+                              child: Center(
+                                child: Text('No sensor data available for this device.'),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    device.name,
+                                    style: Theme.of(context).textTheme.headline6,
+                                  ),
+                                  if (devices.length > 1)
+                                    DropdownButton<String>(
+                                      value: device.deviceId,
+                                      items: devices
+                                          .map((d) => DropdownMenuItem(
+                                                value: d.deviceId,
+                                                child: Text(d.name),
+                                              ))
+                                          .toList(),
+                                      onChanged: (id) {
+                                        if (id != null) {
+                                          deviceProvider.selectDevice(id);
+                                        }
+                                      },
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: GridView.count(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: 1.1,
+                                children: [
+                                  _MetricCard(
+                                    title: 'pH',
+                                    value: reading.ph.toStringAsFixed(2),
+                                    color: _getMetricColor(reading.ph, 7.2, 7.8),
+                                    icon: Icons.science,
+                                    onTap: () => Navigator.pushNamed(context, '/metric/ph'),
+                                  ),
+                                  _MetricCard(
+                                    title: 'Turbidity',
+                                    value: reading.turbidity.toStringAsFixed(2),
+                                    color: _getMetricColor(reading.turbidity, 0, 5),
+                                    icon: Icons.opacity,
+                                    onTap: () => Navigator.pushNamed(context, '/metric/turbidity'),
+                                  ),
+                                  _MetricCard(
+                                    title: 'Temperature',
+                                    value: reading.temperature.toStringAsFixed(1) + ' °C',
+                                    color: _getMetricColor(reading.temperature, 26, 30),
+                                    icon: Icons.thermostat,
+                                    onTap: () => Navigator.pushNamed(context, '/metric/temperature'),
+                                  ),
+                                  _AllMetricsCard(
+                                    onTap: () => Navigator.pushNamed(context, '/metrics/graph'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
     );
   }
 

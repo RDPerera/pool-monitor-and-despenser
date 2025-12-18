@@ -24,13 +24,19 @@ class DeviceProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+
   void _setLoading(bool loading) {
     _isLoading = loading;
+    debugPrint('[DeviceProvider] Loading: $_isLoading');
     notifyListeners();
   }
 
+
   void _setError(String? error) {
     _error = error;
+    if (error != null) {
+      debugPrint('[DeviceProvider] Error: $error');
+    }
     notifyListeners();
   }
 
@@ -39,12 +45,15 @@ class DeviceProvider with ChangeNotifier {
     _setError(null);
 
     try {
+      debugPrint('[DeviceProvider] Fetching devices...');
       _devices = await _deviceService.getDevices();
+      debugPrint('[DeviceProvider] Devices loaded: \\${_devices.length}');
       if (_devices.isNotEmpty && _selectedDevice == null) {
         _selectedDevice = _devices.first;
         await loadLatestReading(_selectedDevice!.deviceId);
       }
     } catch (e) {
+      debugPrint('[DeviceProvider] Exception in loadDevices: $e');
       _setError(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       _setLoading(false);
@@ -76,9 +85,19 @@ class DeviceProvider with ChangeNotifier {
 
   Future<void> loadLatestReading(String deviceId) async {
     try {
-      _latestReading = await _deviceService.getLatestReading(deviceId);
+      debugPrint('[DeviceProvider] Fetching latest reading for device: $deviceId');
+      final reading = await _deviceService.getLatestReading(deviceId);
+      if (reading == null || reading.ph == null || reading.turbidity == null || reading.temperature == null) {
+        debugPrint('[DeviceProvider] No valid latest reading for device: $deviceId');
+        _latestReading = null;
+      } else {
+        _latestReading = reading;
+        debugPrint('[DeviceProvider] Latest reading: $_latestReading');
+      }
       notifyListeners();
     } catch (e) {
+      debugPrint('[DeviceProvider] Exception in loadLatestReading: $e');
+      _latestReading = null;
       _setError(e.toString().replaceFirst('Exception: ', ''));
     }
   }

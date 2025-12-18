@@ -4,7 +4,7 @@ import '../models/device.dart';
 import 'auth_service.dart';
 
 class DeviceService {
-  static const String baseUrl = 'http://localhost:500/api';
+  static const String baseUrl = 'http://localhost:5000/api';
   final AuthService _authService = AuthService();
   
   Future<Map<String, String>> _getHeaders() async {
