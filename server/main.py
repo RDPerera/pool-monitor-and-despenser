@@ -1064,6 +1064,47 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         print("Database tables created successfully!")
+
+        # === MOCK DATA INSERTION ===
+        # Check if mock user exists
+        if not User.query.filter_by(email='mockuser@example.com').first():
+            user = User(
+                email='mockuser@example.com',
+                first_name='Mock',
+                last_name='User',
+                role='user',
+                is_active=True
+            )
+            user.set_password('password123')
+            db.session.add(user)
+            db.session.commit()
+            print('Mock user created.')
+
+        # Check if mock device exists
+        if not Device.query.filter_by(device_id='MOCKDEVICE001').first():
+            device = Device(
+                device_id='MOCKDEVICE001',
+                name='Test Pool Device',
+                location='Test Location'
+            )
+            db.session.add(device)
+            db.session.commit()
+            print('Mock device created.')
+
+        # Check if mock sensor reading exists
+        if not SensorReading.query.filter_by(device_id='MOCKDEVICE001').first():
+            reading = SensorReading(
+                device_id='MOCKDEVICE001',
+                ph=7.2,
+                turbidity=4.5,
+                temperature=27.0,
+                water_quality='optimal',
+                wifi_rssi=-55,
+                uptime=123456
+            )
+            db.session.add(reading)
+            db.session.commit()
+            print('Mock sensor reading created.')
     
     # Run the app
     port = int(os.getenv('PORT', 5000))
