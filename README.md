@@ -33,7 +33,7 @@ pip install flask flask-cors flask-sqlalchemy python-dotenv
 python main.py
 ```
 
-The server will start on http://localhost:5001
+The server will start on http://localhost:500
 
 ## API Endpoints
 
@@ -600,7 +600,7 @@ Create a `.env` file in the server directory:
 
 ```
 DEBUG=True
-PORT=5001
+PORT=500
 DATABASE_URL=sqlite:///pool_monitor.db
 JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production
 ```

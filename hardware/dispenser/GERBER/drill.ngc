@@ -1,0 +1,119 @@
+( pcb2gcode 2.5.0 )
+( Software-independent Gcode )
+
+( This file uses 4 drill bit sizes. )
+( Bit sizes: [0.7mm] [0.8mm] [0.95mm] [1mm] )
+
+G94       (Millimeters per minute feed rate.)
+G21       (Units == Millimeters.)
+G91.1     (Incremental arc distance mode.)
+G90       (Absolute coordinates.)
+G00 S8000     (RPM spindle speed.)
+
+G00 Z10.00000 (Retract)
+T1
+M5      (Spindle stop.)
+G04 P1.00000
+(MSG, Change tool bit to drill size 0.7mm)
+M6      (Tool change.)
+M0      (Temporary machine stop.)
+M3      (Spindle on clockwise.)
+G0 Z5.00000
+G04 P1.00000
+
+G81 R5.00000 Z-1.70000 F300.00000 X40.53500 Y29.12500
+X45.61500 Y29.12500
+X40.53500 Y23.12500
+X45.61500 Y23.12500
+G80
+
+G00 Z10.00000 (Retract)
+T2
+M5      (Spindle stop.)
+G04 P1.00000
+(MSG, Change tool bit to drill size 0.8mm)
+M6      (Tool change.)
+M0      (Temporary machine stop.)
+M3      (Spindle on clockwise.)
+G0 Z5.00000
+G04 P1.00000
+
+G81 R5.00000 Z-1.70000 F300.00000 X6.72500 Y24.67500
+X6.72500 Y26.67500
+X6.72500 Y28.67500
+X6.72500 Y30.67500
+X6.72500 Y32.67500
+X6.72500 Y34.67500
+X6.72500 Y36.67500
+X6.72500 Y38.67500
+X6.72500 Y40.67500
+X6.72500 Y42.67500
+X6.72500 Y44.67500
+X6.72500 Y46.67500
+X6.72500 Y48.67500
+X6.72500 Y50.67500
+X6.72500 Y52.67500
+X32.12500 Y52.67500
+X32.12500 Y50.67500
+X32.12500 Y48.67500
+X32.12500 Y46.67500
+X32.12500 Y44.67500
+X32.12500 Y42.67500
+X32.12500 Y40.67500
+X32.12500 Y38.67500
+X32.12500 Y36.67500
+X32.12500 Y34.67500
+X32.12500 Y32.67500
+X32.12500 Y30.67500
+X32.12500 Y28.67500
+X32.12500 Y26.67500
+X32.12500 Y24.67500
+G80
+
+G00 Z10.00000 (Retract)
+T3
+M5      (Spindle stop.)
+G04 P1.00000
+(MSG, Change tool bit to drill size 0.95mm)
+M6      (Tool change.)
+M0      (Temporary machine stop.)
+M3      (Spindle on clockwise.)
+G0 Z5.00000
+G04 P1.00000
+
+G81 R5.00000 Z-1.70000 F300.00000 X13.12500 Y61.12500
+X15.62500 Y61.12500
+X18.12500 Y61.12500
+X20.62500 Y61.12500
+X23.12500 Y61.12500
+X25.62500 Y61.12500
+G80
+
+G00 Z10.00000 (Retract)
+T4
+M5      (Spindle stop.)
+G04 P1.00000
+(MSG, Change tool bit to drill size 1mm)
+M6      (Tool change.)
+M0      (Temporary machine stop.)
+M3      (Spindle on clockwise.)
+G0 Z5.00000
+G04 P1.00000
+
+G81 R5.00000 Z-1.70000 F300.00000 X4.32500 Y11.12500
+X11.92500 Y11.12500
+X42.62500 Y13.12500
+X45.12500 Y13.12500
+X41.62500 Y40.12500
+X44.12500 Y40.12500
+X40.62500 Y61.12500
+X43.12500 Y61.12500
+G80
+
+G00 Z10.000 ( All done -- retract )
+
+M5      (Spindle off.)
+G04 P1.000000
+M9      (Coolant off.)
+M2      (Program end.)
+

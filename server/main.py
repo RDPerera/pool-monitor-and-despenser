@@ -11,8 +11,10 @@ from functools import wraps
 # Load environment variables
 load_dotenv()
 
+
 app = Flask(__name__)
-CORS(app)
+# Allow all origins explicitly
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///pool_monitor.db')
