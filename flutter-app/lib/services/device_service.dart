@@ -74,9 +74,6 @@ class DeviceService {
       headers: await _getHeaders(),
     );
 
-    // Debug: print raw response
-    print('[DeviceService] getLatestReading raw response: ${response.body}');
-
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return data != null ? SensorReading.fromJson(data) : null;

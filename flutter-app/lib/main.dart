@@ -31,6 +31,7 @@ class PoolMonitorApp extends StatelessWidget {
           primarySwatch: Colors.blue,
           useMaterial3: true,
         ),
+        debugShowCheckedModeBanner: false,
         initialRoute: '/login',
         routes: {
           '/login': (context) => const LoginScreen(),
