@@ -49,6 +49,9 @@ dependencies:
   # Charts and graphs
   fl_chart: ^0.60.0
   
+  # Sensors for gyroscope
+  sensors_plus: ^4.0.2
+  
   # Date formatting
   intl: ^0.18.1
   
