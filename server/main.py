@@ -3,10 +3,12 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 import os
+import json
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 from functools import wraps
+from threading import Lock
 
 # Load environment variables
 load_dotenv()
@@ -21,6 +23,42 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///poo
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
 db = SQLAlchemy(app)
+
+# Dispenser configuration
+DISPENSER_CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'dispenser_config.json')
+file_lock = Lock()
+
+def read_dispenser_config():
+    """Read dispenser configuration from JSON file"""
+    with file_lock:
+        try:
+            with open(DISPENSER_CONFIG_FILE, 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            # Create default config if file doesn't exist
+            default_config = {
+                "dispenser1": "0",
+                "dispenser2": "0",
+                "dispenser3": "0",
+                "dispenser4": "0"
+            }
+            with open(DISPENSER_CONFIG_FILE, 'w') as f:
+                json.dump(default_config, f, indent=2)
+            return default_config
+        except json.JSONDecodeError:
+            return {
+                "dispenser1": "0",
+                "dispenser2": "0",
+                "dispenser3": "0",
+                "dispenser4": "0"
+            }
+
+def write_dispenser_config(config):
+    """Write dispenser configuration to JSON file"""
+    with file_lock:
+        with open(DISPENSER_CONFIG_FILE, 'w') as f:
+            json.dump(config, f, indent=2)
+
 
 # ==================== DATABASE MODELS ====================
 
@@ -1020,6 +1058,75 @@ def get_all_chemical_jobs():
             'jobs': [data.to_dict() for data in chemical_data]
         }), 200
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ==================== DISPENSER API ENDPOINTS ====================
+
+@app.route('/api/dispenser/get', methods=['GET'])
+def get_dispenser_values():
+    """Get current dispenser values from JSON file"""
+    try:
+        config = read_dispenser_config()
+        print(f"Dispenser GET request: {config}")
+        return jsonify(config), 200
+    except Exception as e:
+        print(f"Error reading dispenser config: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/dispenser/reset', methods=['POST'])
+def reset_dispenser_values():
+    """Reset all dispenser values to zero"""
+    try:
+        config = {
+            "dispenser1": "0",
+            "dispenser2": "0",
+            "dispenser3": "0",
+            "dispenser4": "0"
+        }
+        write_dispenser_config(config)
+        print(f"Dispenser RESET: All values set to 0")
+        return jsonify({
+            'message': 'Dispenser values reset successfully',
+            'config': config
+        }), 200
+    except Exception as e:
+        print(f"Error resetting dispenser config: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/dispenser/set', methods=['POST'])
+def set_dispenser_values():
+    """Set dispenser values from web interface or API call"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Read current config
+        config = read_dispenser_config()
+        
+        # Update provided values
+        if 'dispenser1' in data:
+            config['dispenser1'] = str(data['dispenser1'])
+        if 'dispenser2' in data:
+            config['dispenser2'] = str(data['dispenser2'])
+        if 'dispenser3' in data:
+            config['dispenser3'] = str(data['dispenser3'])
+        if 'dispenser4' in data:
+            config['dispenser4'] = str(data['dispenser4'])
+        
+        # Write updated config
+        write_dispenser_config(config)
+        print(f"Dispenser SET: {config}")
+        
+        return jsonify({
+            'message': 'Dispenser values updated successfully',
+            'config': config
+        }), 200
+    except Exception as e:
+        print(f"Error setting dispenser config: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 

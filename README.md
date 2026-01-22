@@ -1,9 +1,54 @@
-# Pool Monitor and Chemical Dispenser API
+# Pool Monitor and Chemical Dispenser System
+
+A comprehensive IoT solution for pool management featuring:
+- **ESP32-based Chemical Dispenser** with WiFi Manager and remote control
+- **Flask REST API** for pool monitoring and chemical management
+- **Flutter Mobile App** for monitoring and control (in development)
+- **Cloudflare Tunnel** integration for secure remote access
+
+## 🚀 Quick Start
+
+### Chemical Dispenser System (NEW!)
+
+**Hardware:** ESP32 + 4-channel relay module + pumps
+
+**Quick Setup:**
+```bash
+# 1. Start the server
+cd server
+./start_server.sh
+
+# 2. Start Cloudflare tunnel (for testing)
+cloudflared tunnel --url http://localhost:5000
+
+# 3. Update ESP32 firmware with tunnel URL and upload
+# 4. Configure WiFi on ESP32 (long press button > 5 sec)
+# 5. Test dispensing!
+```
+
+**Complete Documentation:**
+- 📘 [**DISPENSER_README.md**](DISPENSER_README.md) - Main dispenser guide
+- 📗 [**DISPENSER_SETUP.md**](DISPENSER_SETUP.md) - Detailed setup instructions
+- 📙 [**CLOUDFLARE_TUNNEL_SETUP.md**](CLOUDFLARE_TUNNEL_SETUP.md) - Tunnel configuration
+- 📝 [**QUICK_REFERENCE.md**](QUICK_REFERENCE.md) - Quick reference card
+- 🔌 [**WIRING_DIAGRAM.txt**](WIRING_DIAGRAM.txt) - Hardware wiring diagrams
+
+### Pool Monitor API
 
 A Flask-based REST API for monitoring pool water quality and managing chemical dispenser data.
 
 ## Features
 
+### Chemical Dispenser System
+- ✅ **WiFi Manager** - Easy WiFi configuration via captive portal
+- ✅ **4 Independent Dispensers** - Control 4 chemical pumps separately
+- ✅ **Remote Control** - Access from anywhere via Cloudflare Tunnel
+- ✅ **LED Status Indicators** - Visual feedback for all states
+- ✅ **Test Mode** - Quick button press to test all pumps
+- ✅ **Auto-Reset** - Automatically clears jobs after dispensing
+- ✅ **JSON Configuration** - Easy-to-modify settings
+
+### Pool Monitoring API
 - Pool water quality monitoring (pH, turbidity, temperature)
 - Device management and configuration
 - Chemical dispenser data management
@@ -12,30 +57,113 @@ A Flask-based REST API for monitoring pool water quality and managing chemical d
 
 ## Installation
 
+### Server Setup
+
 1. Navigate to the server directory:
 ```bash
 cd server
 ```
 
-2. Create and activate virtual environment:
+2. **Quick Start** (recommended):
+```bash
+./start_server.sh
+```
+
+**OR Manual Setup:**
+
+3. Create and activate virtual environment:
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. Install dependencies:
+4. Install dependencies:
 ```bash
-pip install flask flask-cors flask-sqlalchemy python-dotenv
+pip install -r requirements.txt
 ```
 
-4. Run the application:
+5. Run the application:
 ```bash
 python main.py
 ```
 
-The server will start on http://localhost:500
+The server will start on http://localhost:5000
+
+### ESP32 Firmware Setup
+
+See [DISPENSER_SETUP.md](DISPENSER_SETUP.md) for complete instructions.
+
+**Quick version:**
+1. Install Arduino IDE + ESP32 support + required libraries
+2. Open `dispenser/firmware.ino`
+3. Update API URLs with your Cloudflare tunnel URL
+4. Upload to ESP32
+5. Configure WiFi (long press button > 5 seconds)
 
 ## API Endpoints
+
+### Chemical Dispenser Endpoints (NEW!)
+
+#### Get Dispenser Values
+```http
+GET /api/dispenser/get
+```
+Returns current dispenser time values (in seconds).
+
+**Response:**
+```json
+{
+  "dispenser1": "0",
+  "dispenser2": "0",
+  "dispenser3": "0",
+  "dispenser4": "0"
+}
+```
+
+#### Set Dispenser Values
+```http
+POST /api/dispenser/set
+Content-Type: application/json
+
+{
+  "dispenser1": "5",
+  "dispenser2": "3",
+  "dispenser3": "2",
+  "dispenser4": "4"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Dispenser values updated successfully",
+  "config": {
+    "dispenser1": "5",
+    "dispenser2": "3",
+    "dispenser3": "2",
+    "dispenser4": "4"
+  }
+}
+```
+
+#### Reset Dispenser Values
+```http
+POST /api/dispenser/reset
+```
+Resets all dispenser values to "0".
+
+**Response:**
+```json
+{
+  "message": "Dispenser values reset successfully",
+  "config": {
+    "dispenser1": "0",
+    "dispenser2": "0",
+    "dispenser3": "0",
+    "dispenser4": "0"
+  }
+}
+```
 
 ### Authentication Endpoints
 
