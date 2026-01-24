@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/device.dart';
 import '../services/device_service.dart';
 
@@ -48,13 +49,65 @@ class DeviceProvider with ChangeNotifier {
       debugPrint('[DeviceProvider] Fetching devices...');
       _devices = await _deviceService.getDevices();
       debugPrint('[DeviceProvider] Devices loaded: \\${_devices.length}');
-      if (_devices.isNotEmpty && _selectedDevice == null) {
+
+      // If no real devices found, populate mock device + reading in debug mode
+      if (_devices.isEmpty && kDebugMode) {
+        _devices = [
+          Device(
+            id: 0,
+            deviceId: 'mock-device',
+            name: 'Mock Pool Device',
+            location: 'Test Pool',
+            registeredAt: DateTime.now().toIso8601String(),
+            lastSeen: DateTime.now().toIso8601String(),
+          ),
+        ];
+        _selectedDevice = _devices.first;
+        _latestReading = SensorReading(
+          id: 0,
+          deviceId: 'mock-device',
+          timestamp: DateTime.now().toIso8601String(),
+          ph: 7.20,
+          turbidity: 3.5,
+          temperature: 26.8,
+          waterQuality: 'Optimal',
+          wifiRssi: -48,
+          uptime: 3600,
+        );
+      } else if (_devices.isNotEmpty && _selectedDevice == null) {
         _selectedDevice = _devices.first;
         await loadLatestReading(_selectedDevice!.deviceId);
       }
     } catch (e) {
       debugPrint('[DeviceProvider] Exception in loadDevices: $e');
-      _setError(e.toString().replaceFirst('Exception: ', ''));
+      if (kDebugMode) {
+        // Populate mock device + reading when backend is unavailable
+        _devices = [
+          Device(
+            id: 0,
+            deviceId: 'mock-device',
+            name: 'Mock Pool Device',
+            location: 'Test Pool',
+            registeredAt: DateTime.now().toIso8601String(),
+            lastSeen: DateTime.now().toIso8601String(),
+          ),
+        ];
+        _selectedDevice = _devices.first;
+        _latestReading = SensorReading(
+          id: 0,
+          deviceId: 'mock-device',
+          timestamp: DateTime.now().toIso8601String(),
+          ph: 7.20,
+          turbidity: 3.5,
+          temperature: 26.8,
+          waterQuality: 'Optimal',
+          wifiRssi: -48,
+          uptime: 3600,
+        );
+        _setError(null);
+      } else {
+        _setError(e.toString().replaceFirst('Exception: ', ''));
+      }
     } finally {
       _setLoading(false);
     }
@@ -77,7 +130,24 @@ class DeviceProvider with ChangeNotifier {
         hours: hours,
       );
     } catch (e) {
-      _setError(e.toString().replaceFirst('Exception: ', ''));
+      debugPrint('[DeviceProvider] Exception in loadDeviceReadings: $e');
+      if (kDebugMode) {
+        // create some mock historical readings for UI demo
+        _readings = List.generate(6, (i) {
+          final t = DateTime.now().subtract(Duration(hours: i * 4));
+          return SensorReading(
+            id: i,
+            deviceId: deviceId,
+            timestamp: t.toIso8601String(),
+            ph: 7.0 + (i % 3) * 0.1,
+            turbidity: 2.0 + (i % 4) * 0.5,
+            temperature: 26.0 + (i % 5) * 0.6,
+            waterQuality: 'Optimal',
+          );
+        });
+      } else {
+        _setError(e.toString().replaceFirst('Exception: ', ''));
+      }
     } finally {
       _setLoading(false);
     }
@@ -87,8 +157,8 @@ class DeviceProvider with ChangeNotifier {
     try {
       debugPrint('[DeviceProvider] Fetching latest reading for device: $deviceId');
       final reading = await _deviceService.getLatestReading(deviceId);
-      if (reading == null || reading.ph == null || reading.turbidity == null || reading.temperature == null) {
-        debugPrint('[DeviceProvider] No valid latest reading for device: $deviceId');
+      if (reading == null) {
+        debugPrint('[DeviceProvider] No latest reading for device: $deviceId');
         _latestReading = null;
       } else {
         _latestReading = reading;
@@ -97,8 +167,24 @@ class DeviceProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('[DeviceProvider] Exception in loadLatestReading: $e');
-      _latestReading = null;
-      _setError(e.toString().replaceFirst('Exception: ', ''));
+      if (kDebugMode) {
+        _latestReading = SensorReading(
+          id: 0,
+          deviceId: deviceId,
+          timestamp: DateTime.now().toIso8601String(),
+          ph: 7.20,
+          turbidity: 3.5,
+          temperature: 26.8,
+          waterQuality: 'Optimal',
+          wifiRssi: -48,
+          uptime: 3600,
+        );
+        _setError(null);
+        notifyListeners();
+      } else {
+        _latestReading = null;
+        _setError(e.toString().replaceFirst('Exception: ', ''));
+      }
     }
   }
 
@@ -108,8 +194,14 @@ class DeviceProvider with ChangeNotifier {
 
     try {
       _deviceConfig = await _deviceService.getDeviceConfig(deviceId);
+      // leave _deviceConfig as returned by the backend (no debug mock)
     } catch (e) {
-      _setError(e.toString().replaceFirst('Exception: ', ''));
+      debugPrint('[DeviceProvider] Exception in loadDeviceConfig: $e');
+      if (kDebugMode) {
+        _setError(null);
+      } else {
+        _setError(e.toString().replaceFirst('Exception: ', ''));
+      }
     } finally {
       _setLoading(false);
     }

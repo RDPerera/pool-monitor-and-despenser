@@ -31,12 +31,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Auto Dispense Settings
   bool _autoDispenseEnabled = true;
-  RangeValues _targetPHRange = const RangeValues(7.2, 7.6);
-  RangeValues _targetChlorineRange = const RangeValues(1.0, 3.0);
+  final RangeValues _targetPHRange = const RangeValues(7.2, 7.6);
+  final RangeValues _targetChlorineRange = const RangeValues(1.0, 3.0);
   final _maxDoseController = TextEditingController(text: '500');
 
   // Alert Thresholds - Simplified
-  String _pHAlertLevel = 'Normal';
+  String _pHAlertLevel = 'Normal'; // Options: Normal, Strict, Relaxed
   String _chlorineAlertLevel = 'Normal';
   String _temperatureAlertLevel = 'Normal';
   final bool _sensorFailureAlerts = true;
@@ -253,7 +253,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Icon(
                     isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.grey[600],
+                    color: Colors.grey[400],
                   ),
                 ],
               ),
@@ -261,15 +261,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           if (isExpanded)
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  content,
-                ],
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
               ),
+              child: content,
             ),
         ],
       ),
@@ -280,121 +280,78 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!_isEditingProfile) ...[
-          _buildInfoRow('Pool Name', _poolNameController.text),
-          _buildInfoRow('Pool Type', _poolType),
-          _buildInfoRow('Pool Volume', '${_poolVolumeController.text} Liters'),
-          _buildInfoRow('Usage Level', _usageLevel),
-          _buildInfoRow('Operating Hours', _operatingHoursController.text),
-          const SizedBox(height: 16),
-          if (canEdit)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _isEditingProfile = true;
-                  });
-                },
-                icon: const Icon(Icons.edit),
-                label: const Text('Edit Profile'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1976D2),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-        ] else ...[
-          TextField(
-            controller: _poolNameController,
-            decoration: const InputDecoration(
-              labelText: 'Pool Name',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            value: _poolType,
-            decoration: const InputDecoration(
-              labelText: 'Pool Type',
-              border: OutlineInputBorder(),
-            ),
-            items: ['Residential', 'Hotel', 'Public'].map((type) {
-              return DropdownMenuItem(value: type, child: Text(type));
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _poolType = value;
-                });
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _poolVolumeController,
-            decoration: const InputDecoration(
-              labelText: 'Pool Volume (Liters)',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            value: _usageLevel,
-            decoration: const InputDecoration(
-              labelText: 'Usage Level',
-              border: OutlineInputBorder(),
-            ),
-            items: ['Low', 'Medium', 'High'].map((level) {
-              return DropdownMenuItem(value: level, child: Text(level));
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _usageLevel = value;
-                });
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _operatingHoursController,
-            decoration: const InputDecoration(
-              labelText: 'Operating Hours',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
+        _buildTextField(
+          label: 'Pool Name',
+          controller: _poolNameController,
+          enabled: _isEditingProfile && canEdit,
+        ),
+        const SizedBox(height: 16),
+        _buildDropdownField(
+          label: 'Pool Type',
+          value: _poolType,
+          items: ['Residential', 'Commercial', 'Public'],
+          onChanged: canEdit && _isEditingProfile
+              ? (value) => setState(() => _poolType = value!)
+              : null,
+        ),
+        const SizedBox(height: 16),
+        _buildTextField(
+          label: 'Pool Volume (Liters)',
+          controller: _poolVolumeController,
+          enabled: _isEditingProfile && canEdit,
+          keyboardType: TextInputType.number,
+        ),
+        const SizedBox(height: 16),
+        _buildDropdownField(
+          label: 'Usage Level',
+          value: _usageLevel,
+          items: ['Low', 'Medium', 'High'],
+          onChanged: canEdit && _isEditingProfile
+              ? (value) => setState(() => _usageLevel = value!)
+              : null,
+        ),
+        const SizedBox(height: 16),
+        _buildTextField(
+          label: 'Operating Hours',
+          controller: _operatingHoursController,
+          enabled: _isEditingProfile && canEdit,
+        ),
+        if (canEdit) ...[
+          const SizedBox(height: 20),
           Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    setState(() {
-                      _isEditingProfile = false;
-                    });
-                  },
+              if (_isEditingProfile)
+                TextButton(
+                  onPressed: () => setState(() => _isEditingProfile = false),
                   child: const Text('Cancel'),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _isEditingProfile = false;
-                    });
+              if (_isEditingProfile) const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _isEditingProfile = !_isEditingProfile;
+                  });
+                  if (!_isEditingProfile) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profile updated successfully')),
+                      const SnackBar(
+                        content: Text('Pool profile updated successfully'),
+                        backgroundColor: Colors.green,
+                      ),
                     );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1976D2),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Save'),
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isEditingProfile ? Colors.green : const Color(0xFF1976D2),
+                  foregroundColor: Colors.white,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_isEditingProfile ? Icons.save : Icons.edit, size: 18),
+                    const SizedBox(width: 6),
+                    Text(_isEditingProfile ? 'Save' : 'Edit'),
+                  ],
                 ),
               ),
             ],
@@ -404,14 +361,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSensorCalibrationContent(bool canCalibrate) {
+  Widget _buildSensorCalibrationContent(bool canEdit) {
     return Column(
       children: [
-        _buildSensorCalibrationRow('pH Sensor', '7.4', 'Calibrated', canCalibrate),
+        _buildSensorCalibrationRow('pH Sensor', '7.4', 'Calibrated', canEdit),
         const Divider(height: 24),
-        _buildSensorCalibrationRow('Chlorine Sensor', '2.1 ppm', 'Calibrated', canCalibrate),
+        _buildSensorCalibrationRow('Chlorine Sensor', '2.1 ppm', 'Calibrated', canEdit),
         const Divider(height: 24),
-        _buildSensorCalibrationRow('Temperature Sensor', '28°C', 'Calibrated', canCalibrate),
+        _buildSensorCalibrationRow('Temperature Sensor', '28°C', 'Calibrated', canEdit),
       ],
     );
   }
@@ -482,136 +439,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildChemicalDispensingContent(bool canEdit) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SwitchListTile(
+          title: const Text(
+            'Auto Dispense Mode',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          subtitle: const Text('Automatically dispense chemicals'),
+          value: _autoDispenseEnabled,
+          onChanged: canEdit
+              ? (value) {
+                  setState(() => _autoDispenseEnabled = value);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Auto dispense ${value ? "enabled" : "disabled"}',
+                      ),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              : null,
+          activeColor: const Color(0xFF1565C0),
+        ),
+        const SizedBox(height: 16),
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: const Color(0xFFE3F2FD),
             borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue[200]!),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Auto Dispense',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Switch(
-                    value: _autoDispenseEnabled,
-                    onChanged: canEdit
-                        ? (value) {
-                            setState(() {
-                              _autoDispenseEnabled = value;
-                            });
-                          }
-                        : null,
-                    activeColor: const Color(0xFF1976D2),
-                  ),
-                ],
+              const Text(
+                'Target Ranges',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1976D2),
+                ),
               ),
-              if (_autoDispenseEnabled) ...[
-                const SizedBox(height: 16),
-                const Text('Target pH Range', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                RangeSlider(
-                  values: _targetPHRange,
-                  min: 6.0,
-                  max: 9.0,
-                  divisions: 30,
-                  labels: RangeLabels(
-                    _targetPHRange.start.toStringAsFixed(1),
-                    _targetPHRange.end.toStringAsFixed(1),
-                  ),
-                  onChanged: canEdit
-                      ? (values) {
-                          setState(() {
-                            _targetPHRange = values;
-                          });
-                        }
-                      : null,
-                ),
-                const SizedBox(height: 12),
-                const Text('Target Chlorine Range (ppm)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                RangeSlider(
-                  values: _targetChlorineRange,
-                  min: 0.0,
-                  max: 5.0,
-                  divisions: 50,
-                  labels: RangeLabels(
-                    _targetChlorineRange.start.toStringAsFixed(1),
-                    _targetChlorineRange.end.toStringAsFixed(1),
-                  ),
-                  onChanged: canEdit
-                      ? (values) {
-                          setState(() {
-                            _targetChlorineRange = values;
-                          });
-                        }
-                      : null,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _maxDoseController,
-                  decoration: const InputDecoration(
-                    labelText: 'Max Dose per Cycle (ml)',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                  enabled: canEdit,
-                ),
-              ],
+              const SizedBox(height: 8),
+              _buildInfoRow('pH Range', '${_targetPHRange.start.toStringAsFixed(1)} - ${_targetPHRange.end.toStringAsFixed(1)}'),
+              const SizedBox(height: 4),
+              _buildInfoRow('Chlorine Range', '${_targetChlorineRange.start.toStringAsFixed(1)} - ${_targetChlorineRange.end.toStringAsFixed(1)} ppm'),
+              const SizedBox(height: 4),
+              _buildInfoRow('Max Dose', '${_maxDoseController.text} ml'),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF3E0),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Manual Dispense',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+        if (canEdit)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _showManualDispenseDialog(context),
+              icon: const Icon(Icons.water_drop),
+              label: const Text('Manual Dispense'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF6C00),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Manually trigger chemical dispensing',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.black54,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (canEdit)
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showManualDispenseDialog(context),
-                    icon: const Icon(Icons.water_drop),
-                    label: const Text('Start Manual Dispense'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEF6C00),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-            ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -692,7 +585,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               Switch(
                 value: _sensorFailureAlerts,
-                onChanged: null,
+                onChanged: null, // Always enabled (critical alerts)
                 activeColor: Colors.grey,
               ),
             ],
@@ -805,6 +698,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           child: Column(
             children: [
+              // User Roles - Always visible for all users
               _buildNavigationTile(
                 icon: Icons.people,
                 iconColor: const Color(0xFF1976D2),
@@ -897,32 +791,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[700],
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
@@ -966,6 +834,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         filled: true,
         fillColor: onChanged != null ? Colors.white : Colors.grey[100],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[700],
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+        ],
       ),
     );
   }

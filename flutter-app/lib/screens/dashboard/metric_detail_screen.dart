@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/device_provider.dart';
+import '../../widgets/app_logo.dart';
 
 class MetricDetailScreen extends StatelessWidget {
   final String metric;
@@ -33,7 +34,7 @@ class MetricDetailScreen extends StatelessWidget {
         value = 0;
     }
     return Scaffold(
-      appBar: AppBar(title: Text('$metric Details')),
+      appBar: AppBar(title: Text('$metric Details'), leading: const Padding(padding: EdgeInsets.only(left:12), child: AppLogo(size:32))),
       body: Center(
         child: Card(
           margin: const EdgeInsets.all(32),
@@ -44,12 +45,12 @@ class MetricDetailScreen extends StatelessWidget {
               children: [
                 Text(
                   metric.toUpperCase(),
-                  style: Theme.of(context).textTheme.headline5,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  value.toStringAsFixed(2) + ' $unit',
-                  style: Theme.of(context).textTheme.headline3?.copyWith(color: Colors.blue),
+                  '${value.toStringAsFixed(2)} $unit',
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(color: Colors.blue),
                 ),
                 const SizedBox(height: 16),
                 Text('Last updated: ${reading.timestamp}'),

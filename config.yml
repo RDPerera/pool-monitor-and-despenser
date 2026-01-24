@@ -1,0 +1,10 @@
+tunnel: 127e13a0-e20d-4757-bad5-a63dbd14c309
+credentials-file: ~/.cloudflared/127e13a0-e20d-4757-bad5-a63dbd14c309.json
+
+ingress:
+  # Route to your Flask server (adjust port if needed - check server/.env)
+  - hostname: poolmd.sciomarkhub.com
+    service: http://localhost:5000
+  
+  # Catch-all rule (required)
+  - service: http_status:404

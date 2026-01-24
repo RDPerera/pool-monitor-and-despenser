@@ -1,0 +1,17 @@
+Tunnel Name: poolmd
+Tunnel ID: 127e13a0-e20d-4757-bad5-a63dbd14c309
+Hostname: poolmd.sciomarkhub.com
+Created: Sat Jan 24 12:57:19 +0530 2026
+
+Configuration file: /Users/dilanperera/.cloudflared/config.yml
+Credentials file: /Users/dilanperera/.cloudflared/127e13a0-e20d-4757-bad5-a63dbd14c309.json
+
+To start the tunnel manually:
+  cloudflared tunnel run poolmd
+
+To install as a service:
+  sudo cloudflared service install
+
+Your API will be available at:
+  https://poolmd.sciomarkhub.com/api/dispenser/get
+  https://poolmd.sciomarkhub.com/api/dispenser/set

@@ -1,0 +1,21 @@
+[Unit]
+Description=Pool Monitor Flask Server
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/path/to/pool-monitor-and-despenser/server
+Environment="PATH=/path/to/pool-monitor-and-despenser/server/venv/bin"
+ExecStart=/path/to/pool-monitor-and-despenser/server/venv/bin/python3 main.py
+Restart=on-failure
+RestartSec=5s
+StandardOutput=append:/var/log/pool-server.log
+StandardError=append:/var/log/pool-server-error.log
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

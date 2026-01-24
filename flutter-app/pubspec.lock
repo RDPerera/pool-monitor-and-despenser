@@ -177,14 +177,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.6"
-  equatable:
-    dependency: transitive
-    description:
-      name: equatable
-      sha256: "567c64b3cb4cf82397aac55f4f0cbd3ca20d77c6c03bedbc4ceaddc08904aef7"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.7"
   fake_async:
     dependency: transitive
     description:
@@ -217,14 +209,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
-  fl_chart:
-    dependency: "direct main"
-    description:
-      name: fl_chart
-      sha256: "155556c4aba56c8474308d51b4e5446b80a07db9ab66a3cb74aff05c110df982"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.60.0"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -488,22 +472,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.0"
-  sensors_plus:
-    dependency: "direct main"
-    description:
-      name: sensors_plus
-      sha256: "8e7fa79b4940442bb595bfc0ee9da4af5a22a0fe6ebacc74998245ee9496a82d"
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.0.2"
-  sensors_plus_platform_interface:
-    dependency: transitive
-    description:
-      name: sensors_plus_platform_interface
-      sha256: bc472d6cfd622acb4f020e726433ee31788b038056691ba433fec80e448a094f
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.2.0"
   shared_preferences:
     dependency: "direct main"
     description:

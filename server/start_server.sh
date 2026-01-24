@@ -71,18 +71,21 @@ EOF
     echo ""
 fi
 
+# Read port from .env (default 5000)
+PORT=$(grep -E "^PORT=" .env 2>/dev/null | cut -d'=' -f2 || echo "5000")
+
 echo "==================================="
 echo "Starting Flask Server..."
 echo "==================================="
 echo ""
 echo "Server will be available at:"
-echo "  Local:   http://localhost:5000"
-echo "  Network: http://$(ipconfig getifaddr en0 2>/dev/null || hostname -I | awk '{print $1}'):5000"
+echo "  Local:   http://localhost:$PORT"
+echo "  Network: http://$(ipconfig getifaddr en0 2>/dev/null || hostname -I | awk '{print $1}'):$PORT"
 echo ""
 echo "Dispenser API Endpoints:"
-echo "  GET  http://localhost:5000/api/dispenser/get"
-echo "  POST http://localhost:5000/api/dispenser/set"
-echo "  POST http://localhost:5000/api/dispenser/reset"
+echo "  GET  http://localhost:$PORT/api/dispenser/get"
+echo "  POST http://localhost:$PORT/api/dispenser/set"
+echo "  POST http://localhost:$PORT/api/dispenser/reset"
 echo ""
 echo "Press Ctrl+C to stop the server"
 echo "==================================="
