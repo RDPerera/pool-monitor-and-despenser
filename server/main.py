@@ -1016,6 +1016,33 @@ def update_chemical_data(record_id):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/dispensing-jobs/<int:record_id>', methods=['DELETE'])
+def delete_chemical_data(record_id):
+    """Delete a chemical dispensing job by ID"""
+    try:
+        chemical_data = ChemicalDispenser.query.get(record_id)
+        if not chemical_data:
+            return jsonify({'error': 'Record not found'}), 404
+        db.session.delete(chemical_data)
+        db.session.commit()
+        return jsonify({'message': f'Job {record_id} deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/dispensing-jobs/all', methods=['DELETE'])
+def delete_all_chemical_jobs():
+    """Delete all chemical dispensing jobs"""
+    try:
+        count = ChemicalDispenser.query.delete()
+        db.session.commit()
+        return jsonify({'message': f'Deleted {count} jobs successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/dispensing-jobs/<device_id>', methods=['GET'])
 def get_chemical_data_by_device(device_id):
     """Get chemical dispensing jobs for a specific device"""
