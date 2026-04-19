@@ -8,7 +8,7 @@ import 'pool_profile_card.dart';
 import 'sensor_calibration_card.dart';
 import 'chemical_dispensing_card.dart';
 import 'alert_thresholds_card.dart';
-import 'emergency_stop_button.dart';
+import 'clear_tasks_button.dart';
 import 'user_roles_screen.dart';
 import 'logs_reports_screen.dart';
 
@@ -84,7 +84,7 @@ class _NewSettingsScreenState extends State<NewSettingsScreen> {
                 if (isAdmin)
                   Padding(
                     padding: const EdgeInsets.all(16),
-                    child: EmergencyStopButton(isAdmin: isAdmin),
+                    child: ClearTasksButton(isAdmin: isAdmin),
                   ),
 
                 // Pool Profile Section

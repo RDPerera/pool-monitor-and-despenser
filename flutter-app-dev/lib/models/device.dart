@@ -1,0 +1,155 @@
+import 'package:json_annotation/json_annotation.dart';
+
+part 'device.g.dart';
+
+@JsonSerializable()
+class Device {
+  final int id;
+  @JsonKey(name: 'device_id')
+  final String deviceId;
+  final String? name;
+  final String? location;
+  @JsonKey(name: 'registered_at')
+  final String registeredAt;
+  @JsonKey(name: 'last_seen')
+  final String? lastSeen;
+
+  Device({
+    required this.id,
+    required this.deviceId,
+    this.name,
+    this.location,
+    required this.registeredAt,
+    this.lastSeen,
+  });
+
+  factory Device.fromJson(Map<String, dynamic> json) => _$DeviceFromJson(json);
+  Map<String, dynamic> toJson() => _$DeviceToJson(this);
+}
+
+@JsonSerializable()
+class SensorReading {
+  final int? id;
+  @JsonKey(name: 'device_id')
+  final String? deviceId;
+  final String timestamp;
+  final double ph;
+  final double turbidity;
+  final double temperature;
+  @JsonKey(name: 'water_quality')
+  final String waterQuality;
+  @JsonKey(name: 'wifi_rssi')
+  final int? wifiRssi;
+  final int? uptime;
+  @JsonKey(name: 'chlorine_estimated')
+  final double? chlorineEstimated;
+  @JsonKey(name: 'chlorine_status')
+  final String? chlorineStatus;
+  @JsonKey(name: 'recommended_dose_ml')
+  final int? recommendedDoseMl;
+
+  SensorReading({
+    this.id,
+    this.deviceId,
+    this.timestamp = '',
+    this.ph = 0.0,
+    this.turbidity = 0.0,
+    this.temperature = 0.0,
+    this.waterQuality = '',
+    this.wifiRssi,
+    this.uptime,
+    this.chlorineEstimated,
+    this.chlorineStatus,
+    this.recommendedDoseMl,
+  });
+
+  factory SensorReading.fromJson(Map<String, dynamic> json) {
+    final sensors = json['sensors'] as Map<String, dynamic>?;
+    final status = json['status'] as Map<String, dynamic>?;
+    return SensorReading(
+      id: json['id'] as int?,
+      deviceId: json['device_id'] as String?,
+      timestamp: json['timestamp'] as String? ?? '',
+      ph: (sensors?['ph'] as num?)?.toDouble() ??
+          (json['ph'] as num?)?.toDouble() ??
+          0.0,
+      turbidity: (sensors?['turbidity'] as num?)?.toDouble() ??
+          (json['turbidity'] as num?)?.toDouble() ??
+          0.0,
+      temperature: (sensors?['temperature'] as num?)?.toDouble() ??
+          (json['temperature'] as num?)?.toDouble() ??
+          0.0,
+      waterQuality: status?['water_quality'] as String? ??
+          json['water_quality'] as String? ??
+          '',
+      wifiRssi: status?['wifi_rssi'] as int? ?? json['wifi_rssi'] as int?,
+      uptime: status?['uptime'] as int? ?? json['uptime'] as int?,
+      chlorineEstimated: json['chlorine_estimated'] != null
+          ? (json['chlorine_estimated'] as num).toDouble()
+          : null,
+      chlorineStatus: json['chlorine_status'] as String?,
+      recommendedDoseMl: json['recommended_dose_ml'] as int?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'device_id': deviceId,
+      'timestamp': timestamp,
+      'sensors': {
+        'ph': ph,
+        'turbidity': turbidity,
+        'temperature': temperature,
+      },
+      'status': {
+        'water_quality': waterQuality,
+        'wifi_rssi': wifiRssi,
+        'uptime': uptime,
+      },
+      if (chlorineEstimated != null) 'chlorine_estimated': chlorineEstimated,
+      if (chlorineStatus != null) 'chlorine_status': chlorineStatus,
+      if (recommendedDoseMl != null) 'recommended_dose_ml': recommendedDoseMl,
+    };
+  }
+}
+
+@JsonSerializable()
+class DeviceConfig {
+  final Map<String, dynamic>? calibration;
+  final Map<String, dynamic>? thresholds;
+  final Map<String, dynamic>? intervals;
+
+  DeviceConfig({
+    this.calibration,
+    this.thresholds,
+    this.intervals,
+  });
+
+  factory DeviceConfig.fromJson(Map<String, dynamic> json) =>
+      _$DeviceConfigFromJson(json);
+  Map<String, dynamic> toJson() => _$DeviceConfigToJson(this);
+}
+
+@JsonSerializable()
+class DeviceStats {
+  @JsonKey(name: 'period_hours')
+  final int periodHours;
+  @JsonKey(name: 'total_readings')
+  final int totalReadings;
+  final Map<String, dynamic> ph;
+  final Map<String, dynamic> turbidity;
+  final Map<String, dynamic> temperature;
+
+  DeviceStats({
+    required this.periodHours,
+    required this.totalReadings,
+    required this.ph,
+    required this.turbidity,
+    required this.temperature,
+  });
+
+  factory DeviceStats.fromJson(Map<String, dynamic> json) =>
+      _$DeviceStatsFromJson(json);
+  Map<String, dynamic> toJson() => _$DeviceStatsToJson(this);
+}

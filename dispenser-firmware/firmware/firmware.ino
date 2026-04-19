@@ -12,6 +12,10 @@
 #define RELAY3_PIN 26  // Dispenser 3
 #define RELAY4_PIN 27  // Dispenser 4
 
+// Relay logic: most relay modules are active LOW (LOW = ON, HIGH = OFF)
+#define RELAY_ON  LOW
+#define RELAY_OFF HIGH
+
 // API Configuration
 const char* API_GET_URL = "http://34.70.141.104:5000/api/dispenser/get";
 const char* API_RESET_URL = "http://34.70.141.104:5000/api/dispenser/reset";
@@ -262,7 +266,7 @@ void startDispensing(int d1, int d2, int d3, int d4) {
 
   for (int i = 0; i < 4; i++) {
     if (durations[i] > 0) {
-      digitalWrite(relayPins[i], HIGH);
+      digitalWrite(relayPins[i], RELAY_ON);
       relayActive[i]        = true;
       dispensingStartTime[i] = now;
       Serial.printf("Relay %d ON\n", i + 1);
@@ -280,7 +284,7 @@ void handleDispensing() {
   for (int i = 0; i < 4; i++) {
     if (relayActive[i]) {
       if (now - dispensingStartTime[i] >= (unsigned long)dispensingDuration[i]) {
-        digitalWrite(relayPins[i], LOW);
+        digitalWrite(relayPins[i], RELAY_OFF);
         relayActive[i] = false;
         Serial.printf("Relay %d OFF\n", i + 1);
       } else {
@@ -321,20 +325,20 @@ void callResetAPI() {
 // ── Relay Helpers ─────────────────────────────────────────────────────────────
 
 void allRelaysOff() {
-  digitalWrite(RELAY1_PIN, LOW);
-  digitalWrite(RELAY2_PIN, LOW);
-  digitalWrite(RELAY3_PIN, LOW);
-  digitalWrite(RELAY4_PIN, LOW);
+  digitalWrite(RELAY1_PIN, RELAY_OFF);
+  digitalWrite(RELAY2_PIN, RELAY_OFF);
+  digitalWrite(RELAY3_PIN, RELAY_OFF);
+  digitalWrite(RELAY4_PIN, RELAY_OFF);
 }
 
 void testAllRelays() {
   Serial.println("Test mode - all relays ON for 3 seconds");
   currentLEDState = LED_FAST_BLINK;
 
-  digitalWrite(RELAY1_PIN, HIGH);
-  digitalWrite(RELAY2_PIN, HIGH);
-  digitalWrite(RELAY3_PIN, HIGH);
-  digitalWrite(RELAY4_PIN, HIGH);
+  digitalWrite(RELAY1_PIN, RELAY_ON);
+  digitalWrite(RELAY2_PIN, RELAY_ON);
+  digitalWrite(RELAY3_PIN, RELAY_ON);
+  digitalWrite(RELAY4_PIN, RELAY_ON);
 
   delay(TEST_DURATION);
   allRelaysOff();

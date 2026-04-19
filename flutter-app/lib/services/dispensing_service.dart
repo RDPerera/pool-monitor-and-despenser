@@ -141,4 +141,16 @@ class DispensingService {
       throw Exception(error['error'] ?? 'Failed to update dispensing job');
     }
   }
+
+  Future<void> deleteAllJobs() async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/dispensing-jobs/all'),
+      headers: await _getHeaders(),
+    );
+
+    if (response.statusCode != 200) {
+      final error = json.decode(response.body);
+      throw Exception(error['error'] ?? 'Failed to delete all dispensing jobs');
+    }
+  }
 }
