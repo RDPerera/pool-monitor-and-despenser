@@ -301,30 +301,19 @@ class DeviceProvider with ChangeNotifier {
 
   double estimateChlorineForReading(SensorReading r) {
     if (r.chlorineEstimated != null) return r.chlorineEstimated!;
-    const base = 1.2;
-    return (base + _chlorineDemandScore(r)).clamp(0.5, 4.0);
+    return _chlorineFromNtu(r.turbidity);
   }
 
-  double _chlorineDemandScore(SensorReading reading) {
-    var score = 0.0;
-    if (reading.ph > 7.8) score += 1.2;
-    if (reading.temperature > 30) score += 0.9;
-    if (reading.turbidity > 10) {
-      score += 1.0;
-    } else if (reading.turbidity > 5) {
-      score += 0.4;
-    }
-    return score;
+  // 0.4 NTU → 1.5 ppm, 1.0 NTU → 5.0 ppm (linear)
+  static double _chlorineFromNtu(double ntu) {
+    const slope = (5.0 - 1.5) / (1.0 - 0.4);
+    return (1.5 + (ntu - 0.4) * slope).clamp(0.0, 10.0);
   }
 
   double getEstimatedChlorine() {
     if (_latestReading == null) return 0.0;
-    if (_latestReading!.chlorineEstimated != null) {
-      return _latestReading!.chlorineEstimated!;
-    }
-    const baseLevel = 1.2;
-    final estimate = baseLevel + _chlorineDemandScore(_latestReading!);
-    return double.parse((estimate.clamp(0.5, 4.0)).toStringAsFixed(1));
+    if (_latestReading!.chlorineEstimated != null) return _latestReading!.chlorineEstimated!;
+    return double.parse(_chlorineFromNtu(_latestReading!.turbidity).toStringAsFixed(1));
   }
 
   String getChlorineStatus() {
@@ -343,9 +332,9 @@ class DeviceProvider with ChangeNotifier {
     if (_latestReading!.recommendedDoseMl != null) {
       return _latestReading!.recommendedDoseMl!;
     }
-    final score = _chlorineDemandScore(_latestReading!);
-    if (score < 1.0) return 5;
-    if (score < 2.0) return 10;
+    final chlorine = _chlorineFromNtu(_latestReading!.turbidity);
+    if (chlorine < 1.5) return 5;
+    if (chlorine < 3.0) return 10;
     return 20;
   }
 

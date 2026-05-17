@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -16,6 +17,7 @@ class MetricDetailScreen extends StatefulWidget {
 
 class _MetricDetailScreenState extends State<MetricDetailScreen> {
   bool _refreshing = false;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -24,7 +26,14 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
       final dp = Provider.of<DeviceProvider>(context, listen: false);
       final id = dp.selectedDevice?.deviceId;
       if (id != null && dp.readings.isEmpty) dp.loadDeviceReadings(id, limit: 48);
+      _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) => _refresh());
     });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _refresh() async {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -20,10 +21,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseAnim;
   int _trendIdx = 0;
+  Timer? _refreshTimer;
 
-  static const _trendMetrics = ['ph', 'temperature', 'turbidity', 'chlorine'];
-  static const _trendLabels  = ['pH', 'Temp', 'Turbidity', 'Cl'];
-  static const _trendColors  = [kGreen, kOrange, Color(0xFF5AC8FA), kBlue];
+  static const _trendMetrics = ['all', 'ph', 'temperature', 'turbidity', 'chlorine'];
+  static const _trendLabels  = ['All', 'pH', 'Temp', 'Turbidity', 'Cl'];
+  static const _trendColors  = [kLabel, kGreen, kOrange, Color(0xFF5AC8FA), kBlue];
 
   @override
   void initState() {
@@ -37,6 +39,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _waveCtrl.dispose();
     _pulseCtrl.dispose();
     super.dispose();
@@ -47,7 +50,16 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.didChangeDependencies();
     if (!_initialized) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Provider.of<DeviceProvider>(context, listen: false).loadDevices();
+        final dp = Provider.of<DeviceProvider>(context, listen: false);
+        dp.loadDevices();
+        _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+          final d = Provider.of<DeviceProvider>(context, listen: false);
+          final id = d.selectedDevice?.deviceId;
+          if (id != null && !d.isLoading) {
+            d.loadLatestReading(id);
+            d.loadDeviceReadings(id, limit: 48);
+          }
+        });
       });
       _initialized = true;
     }
@@ -156,7 +168,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             reading == null ? _noData() : _buildMetricsGrid(reading, dp),
                             if (dp.readings.isNotEmpty) ...[
                               const SizedBox(height: 20),
-                              _sectionTitle('24H TRENDS'),
+                              _sectionTitle('TRENDS'),
                               const SizedBox(height: 8),
                               _buildTrendsCard(dp),
                             ],
@@ -198,7 +210,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         : Icons.sensors_rounded;
 
     return _card(
-      onTap: () => Navigator.pushNamed(context, '/metrics/graph'),
       padding: EdgeInsets.zero,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -386,15 +397,17 @@ class _DashboardScreenState extends State<DashboardScreen>
           })),
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          height: 180,
-          child: SensorLineChart(
-            readings: dp.readings,
-            metric: _trendMetrics[_trendIdx],
-            color: _trendColors[_trendIdx],
-            deviceProvider: dp,
-          ),
-        ),
+        _trendMetrics[_trendIdx] == 'all'
+            ? AllParametersChart(readings: dp.readings, deviceProvider: dp)
+            : SizedBox(
+                height: 180,
+                child: SensorLineChart(
+                  readings: dp.readings,
+                  metric: _trendMetrics[_trendIdx],
+                  color: _trendColors[_trendIdx],
+                  deviceProvider: dp,
+                ),
+              ),
       ]),
     );
   }
