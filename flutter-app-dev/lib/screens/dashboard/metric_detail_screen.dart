@@ -15,6 +15,8 @@ class MetricDetailScreen extends StatefulWidget {
 }
 
 class _MetricDetailScreenState extends State<MetricDetailScreen> {
+  bool _refreshing = false;
+
   @override
   void initState() {
     super.initState();
@@ -23,6 +25,18 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
       final id = dp.selectedDevice?.deviceId;
       if (id != null && dp.readings.isEmpty) dp.loadDeviceReadings(id, limit: 48);
     });
+  }
+
+  Future<void> _refresh() async {
+    final dp = Provider.of<DeviceProvider>(context, listen: false);
+    final id = dp.selectedDevice?.deviceId;
+    if (id == null || _refreshing) return;
+    setState(() => _refreshing = true);
+    await Future.wait([
+      dp.loadLatestReading(id),
+      dp.loadDeviceReadings(id, limit: 48),
+    ]);
+    if (mounted) setState(() => _refreshing = false);
   }
 
   Widget _card({required Widget child, EdgeInsets padding = const EdgeInsets.all(20)}) {
@@ -157,9 +171,32 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
     if (reading == null) {
       return Scaffold(
         backgroundColor: kBg,
-        appBar: AppBar(title: Text(widget.metric.toUpperCase())),
-        body: const Center(child: Text('No data available',
-            style: TextStyle(color: kLabel2))),
+        appBar: AppBar(
+          title: Text(widget.metric.toUpperCase()),
+          actions: [
+            IconButton(
+              icon: _refreshing
+                  ? const SizedBox(
+                      width: 20, height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: kBlue),
+                    )
+                  : const Icon(Icons.refresh_rounded, color: kBlue, size: 22),
+              onPressed: _refresh,
+              tooltip: 'Refresh',
+            ),
+          ],
+        ),
+        body: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('No data available', style: TextStyle(color: kLabel2)),
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: _refresh,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
+            ),
+          ]),
+        ),
       );
     }
 
@@ -214,6 +251,19 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
             title: Text(widget.metric.toUpperCase(),
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: kLabel)),
             actions: [
+              _refreshing
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      child: SizedBox(
+                        width: 20, height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: kBlue),
+                      ),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.refresh_rounded, color: kBlue, size: 22),
+                      onPressed: _refresh,
+                      tooltip: 'Refresh',
+                    ),
               Container(
                 margin: const EdgeInsets.only(right: 12),
                 width: 34, height: 34,
