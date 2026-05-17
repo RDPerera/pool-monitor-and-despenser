@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:device_frame/device_frame.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -47,6 +49,18 @@ class PoolMonitorApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Pool Monitor',
         debugShowCheckedModeBanner: false,
+        builder: kIsWeb
+            ? (context, child) => Scaffold(
+                  backgroundColor: const Color(0xFF1C1C1E),
+                  body: Center(
+                    child: DeviceFrame(
+                      device: Devices.ios.iPhone13ProMax,
+                      isFrameVisible: true,
+                      screen: child!,
+                    ),
+                  ),
+                )
+            : null,
         theme: ThemeData(
           useMaterial3: true,
           brightness: Brightness.light,

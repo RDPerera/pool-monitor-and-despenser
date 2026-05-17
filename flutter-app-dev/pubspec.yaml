@@ -62,6 +62,9 @@ dependencies:
   # Charts
   fl_chart: ^0.63.0
 
+  # Device frame for presentations
+  device_frame: ^1.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
